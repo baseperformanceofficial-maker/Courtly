@@ -198,6 +198,8 @@ const MemberTable = (selectedCourtNumber) => {
           res.data.totalPages || Math.ceil(res.data.total / itemsPerPage)
         );
         setTotalRecords(res.data.total || res.data.bookings.length);
+        console.log("cishvaaaa",res.data);
+        
       } catch (error) {
         console.error(error);
         setBookingHistory([]);
