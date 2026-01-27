@@ -415,14 +415,16 @@ const bookedSlots = async (req, res) => {
     // -------------------------------
     // 3️⃣ UTC → IST conversion (ONLY HERE)
     // -------------------------------
-    const formatTimeIST = (utcDate) => {
-      return new Intl.DateTimeFormat("en-IN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-        timeZone: "Asia/Kolkata",
-      }).format(new Date(utcDate));
-    };
+  const formatTimeIST = (date) => {
+  if (!date) return null;
+  
+  return new Date(date).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'UTC'  // Specify UTC timezone
+  });
+};
 
     const formatDateIST = (utcDate) => {
       return new Intl.DateTimeFormat("en-IN", {

@@ -307,15 +307,16 @@ const getFullBookingHistory = async (req, res) => {
     const totalDocs = await Booking.aggregate(countPipeline);
     const totalCount = totalDocs.length > 0 ? totalDocs[0].total : 0;
 
-    // --- Format date/time and calculate dynamic status ---
-   const formatTime = (date) =>
-  date
-    ? new Date(date).toLocaleTimeString("en-IN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      })
-    : null;
+const formatTime = (date) => {
+  if (!date) return null;
+  
+  return new Date(date).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'UTC'  // Specify UTC timezone
+  });
+};
 
     const formatDate = (date) =>
       date
@@ -343,12 +344,12 @@ const getFullBookingHistory = async (req, res) => {
         startDate: formatDate(b.startDate),
         endDate: formatDate(b.endDate),
         startTime: formatTime(b.startTime),
-        endTime: formatTime(b.endTime),
+        endTime:formatTime(b.endTime),
         status: bookingStatus,
         slots: b.slots.map((s) => ({
           ...s,
-          startTime: formatTime(s.startTime),
-          endTime: formatTime(s.endTime),
+          startTime:formatTime(s.startTime),
+          endTime:formatTime(s.endTime),
         })),
       };
     });

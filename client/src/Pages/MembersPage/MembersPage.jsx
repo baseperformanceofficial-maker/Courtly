@@ -63,7 +63,7 @@ function MembersPage() {
     try {
       const res = await axios.get(`${baseUrl}/api/v1/bookings/latest-booking`);
       setMembers(res.data.data || []);
-      console.log(res);
+      console.log("vishhvvvvavavv",res);
     } catch (error) {
       console.error("Error fetching members:", error);
       setError("Failed to load members. Please try again.");
@@ -361,8 +361,9 @@ function MembersPage() {
                   <td className={styles.td}>
                     {member.whatsAppNumber || "N/A"}
                   </td>
-                  <td className={styles.td}>{member.startDate || "N/A"}</td>
-                  <td className={styles.td}>{member.endDate || "N/A"}</td>
+                 
+<td className={styles.td}>{formatDate(member.startDate) || "N/A"}</td>
+<td className={styles.td}>{formatDate(member.endDate) || "N/A"}</td>
                   <td className={styles.td}>{member.courtName || "N/A"}</td>
                   <td className={styles.td}>
                     <span
