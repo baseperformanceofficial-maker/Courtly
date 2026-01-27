@@ -32,7 +32,11 @@ function SettingsPage() {
       setTrainersData(trainerdetails.data.trainers);
     } catch (error) {
       console.error("Error fetching trainers:", error);
-      toast.error(error.response?.data?.message || "Failed to fetch trainers");
+      // Only show error if it's not a 404 "no data found" error
+      if (error.response?.status !== 404) {
+        toast.error(error.response?.data?.message || "Failed to fetch trainers");
+      }
+      setTrainersData([]);
     }
   };
 
@@ -42,7 +46,11 @@ function SettingsPage() {
       setReceptionsData(receptionsdetails.data.receptionists);
     } catch (error) {
       console.error("Error fetching receptionists:", error);
-      toast.error(error.response?.data?.message || "Failed to fetch receptionists");
+      // Only show error if it's not a 404 "no data found" error
+      if (error.response?.status !== 404) {
+        toast.error(error.response?.data?.message || "Failed to fetch receptionists");
+      }
+      setReceptionsData([]);
     }
   };
 

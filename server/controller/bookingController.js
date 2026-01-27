@@ -3,6 +3,20 @@ import Slot from "../model/slotSchema.js";
 import { User } from "../model/userSchema.js";
 import Court from "../model/courtSchema.js";
 import mongoose from "mongoose";
+const formatUTCTime = (date) => {
+  if (!date) return null;
+
+  const hours = date.getUTCHours();
+  const minutes = date.getUTCMinutes();
+
+  const hour12 = hours % 12 || 12;
+  const ampm = hours >= 12 ? "PM" : "AM";
+
+  return `${hour12.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")} ${ampm}`;
+};
+
 const getLatestBookings = async (req, res) => {
   try {
     const { search, startDate, endDate, page = 1, limit = 10 } = req.query;
@@ -123,59 +137,29 @@ const getLatestBookings = async (req, res) => {
     const now = new Date();
 
     // --- Format date & time + calculate dynamic status ---
-    const formattedBookings = latestBookings.map((b) => {
-      let status;
-      if (b.startTime && b.endTime) {
-        if (now < b.startTime) status = "upcoming";
-        else if (now >= b.startTime && now <= b.endTime) status = "active";
-        else status = "expired";
-      } else {
-        status = "upcoming"; // fallback
-      }
+const formattedBookings = latestBookings.map((b) => {
+  const now = new Date();
+  let status;
 
-      const startIST = b.startTime
-        ? new Date(b.startTime).toLocaleTimeString("en-IN", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true,
-            timeZone: "Asia/Kolkata",
-          })
-        : null;
+  if (b.startTime && b.endTime) {
+    if (now < b.startTime) status = "upcoming";
+    else if (now >= b.startTime && now <= b.endTime) status = "active";
+    else status = "expired";
+  } else {
+    status = "upcoming";
+  }
 
-      const endIST = b.endTime
-        ? new Date(b.endTime).toLocaleTimeString("en-IN", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true,
-            timeZone: "Asia/Kolkata",
-          })
-        : null;
+  return {
+    ...b,
+    startTime: formatUTCTime(new Date(b.startTime)),
+    endTime: formatUTCTime(new Date(b.endTime)),
+    startDate: b.startDate,
+    endDate: b.endDate,
+    status,
+  };
+});
 
-      return {
-        ...b,
-        startDate: b.startDate
-          ? new Date(b.startDate).toLocaleDateString("en-IN", {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-              timeZone: "Asia/Kolkata",
-            })
-          : null,
-        endDate: b.endDate
-          ? new Date(b.endDate).toLocaleDateString("en-IN", {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-              timeZone: "Asia/Kolkata",
-            })
-          : null,
-        startTime: startIST,
-        endTime: endIST,
-        status,
-      };
-    });
+
 
     // --- Total count for pagination ---
     const totalDocs = await Booking.countDocuments(matchConditions);
@@ -193,6 +177,8 @@ const getLatestBookings = async (req, res) => {
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
+
 const getFullBookingHistory = async (req, res) => {
   try {
     const { courtId, status, startDate, endDate, search, page = 1, limit = 10 } = req.query;
@@ -270,18 +256,18 @@ const getFullBookingHistory = async (req, res) => {
       // Search filter
       ...(search
         ? [
-            {
-              $match: {
-                $or: [
-                  { "user.firstName": { $regex: search, $options: "i" } },
-                  { "user.lastName": { $regex: search, $options: "i" } },
-                  { phoneNumberStr: { $regex: search, $options: "i" } },
-                  { whatsAppNumberStr: { $regex: search, $options: "i" } },
-                  { "court.courtName": { $regex: search, $options: "i" } },
-                ],
-              },
+          {
+            $match: {
+              $or: [
+                { "user.firstName": { $regex: search, $options: "i" } },
+                { "user.lastName": { $regex: search, $options: "i" } },
+                { phoneNumberStr: { $regex: search, $options: "i" } },
+                { whatsAppNumberStr: { $regex: search, $options: "i" } },
+                { "court.courtName": { $regex: search, $options: "i" } },
+              ],
             },
-          ]
+          },
+        ]
         : []),
 
       { $sort: { createdAt: -1 } },
@@ -304,43 +290,43 @@ const getFullBookingHistory = async (req, res) => {
       },
       ...(search
         ? [
-            {
-              $match: {
-                $or: [
-                  { "user.firstName": { $regex: search, $options: "i" } },
-                  { "user.lastName": { $regex: search, $options: "i" } },
-                  { phoneNumberStr: { $regex: search, $options: "i" } },
-                  { whatsAppNumberStr: { $regex: search, $options: "i" } },
-                ],
-              },
+          {
+            $match: {
+              $or: [
+                { "user.firstName": { $regex: search, $options: "i" } },
+                { "user.lastName": { $regex: search, $options: "i" } },
+                { phoneNumberStr: { $regex: search, $options: "i" } },
+                { whatsAppNumberStr: { $regex: search, $options: "i" } },
+              ],
             },
-          ]
+          },
+        ]
         : []),
       { $count: "total" },
     ];
     const totalDocs = await Booking.aggregate(countPipeline);
     const totalCount = totalDocs.length > 0 ? totalDocs[0].total : 0;
 
-    // --- Format date/time and calculate dynamic status ---
-    const formatTime = (date) =>
-      date
-        ? new Date(date).toLocaleTimeString("en-IN", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true,
-            timeZone: "Asia/Kolkata",
-          })
-        : null;
+const formatTime = (date) => {
+  if (!date) return null;
+  
+  return new Date(date).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'UTC'  // Specify UTC timezone
+  });
+};
 
     const formatDate = (date) =>
       date
         ? new Date(date).toLocaleDateString("en-IN", {
-            weekday: "short",
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-            timeZone: "Asia/Kolkata",
-          })
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          timeZone: "Asia/Kolkata",
+        })
         : null;
 
     const formattedBookings = bookings.map((b) => {
@@ -358,12 +344,12 @@ const getFullBookingHistory = async (req, res) => {
         startDate: formatDate(b.startDate),
         endDate: formatDate(b.endDate),
         startTime: formatTime(b.startTime),
-        endTime: formatTime(b.endTime),
+        endTime:formatTime(b.endTime),
         status: bookingStatus,
         slots: b.slots.map((s) => ({
           ...s,
-          startTime: formatTime(s.startTime),
-          endTime: formatTime(s.endTime),
+          startTime:formatTime(s.startTime),
+          endTime:formatTime(s.endTime),
         })),
       };
     });
@@ -382,4 +368,4 @@ const getFullBookingHistory = async (req, res) => {
 };
 
 
-export{getLatestBookings,getFullBookingHistory}
+export { getLatestBookings, getFullBookingHistory }

@@ -1,2 +1,2 @@
-const baseUrl=`https://courtly-1-nh1l.onrender.com`;
+const baseUrl=`http://localhost:8000`;
 export default baseUrl;

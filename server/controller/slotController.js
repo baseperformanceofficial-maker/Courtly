@@ -142,11 +142,26 @@ if (endDateTime <= startDateTime) {
     let currentDate = new Date(start);
 
     while (currentDate <= end) {
-      const slotStart = new Date(currentDate);
-      slotStart.setHours(startH, startM, 0, 0);
+    const slotStart = new Date(Date.UTC(
+  currentDate.getUTCFullYear(),
+  currentDate.getUTCMonth(),
+  currentDate.getUTCDate(),
+  startH,
+  startM,
+  0,
+  0
+));
 
-      const slotEnd = new Date(currentDate);
-      slotEnd.setHours(endH, endM, 0, 0);
+const slotEnd = new Date(Date.UTC(
+  currentDate.getUTCFullYear(),
+  currentDate.getUTCMonth(),
+  currentDate.getUTCDate(),
+  endH,
+  endM,
+  0,
+  0
+));
+
 
     if (slotStart >= slotEnd) {
     await session.abortTransaction();
@@ -204,11 +219,26 @@ if (endDateTime <= startDateTime) {
     const createdSlots = await Slot.insertMany(slotsToCreate, { session });
 
     // Booking
-    const bookingStartTime = new Date(start);
-    bookingStartTime.setHours(startH, startM, 0, 0);
+   const bookingStartTime = new Date(Date.UTC(
+  start.getUTCFullYear(),
+  start.getUTCMonth(),
+  start.getUTCDate(),
+  startH,
+  startM,
+  0,
+  0
+));
 
-    const bookingEndTime = new Date(end);
-    bookingEndTime.setHours(endH, endM, 0, 0);
+const bookingEndTime = new Date(Date.UTC(
+  end.getUTCFullYear(),
+  end.getUTCMonth(),
+  end.getUTCDate(),
+  endH,
+  endM,
+  0,
+  0
+));
+
 
     const booking = await Booking.create([{
       courtId,
@@ -288,134 +318,154 @@ if (endDateTime <= startDateTime) {
   }
 };
 const bookedSlots = async (req, res) => {
-    const { id } = req.params;
-    const { date } = req.query;
+  const { id } = req.params;
+  const { date } = req.query;
 
-    if (!id) {
-      return res.status(400).json({ message: "Court ID is required" });
-    }
+  if (!id) {
+    return res.status(400).json({ message: "Court ID is required" });
+  }
 
-    try {
-      // Get start/end of day in IST
-      const getISTDayRange = (inputDate) => {
-        let target = inputDate ? new Date(inputDate) : new Date();
-        const istString = target.toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
-        const istDate = new Date(istString);
+  try {
+    // -------------------------------
+    // 1️⃣ Get UTC day range (for query)
+    // -------------------------------
+    const getUTCDayRange = (inputDate) => {
+      const d = inputDate ? new Date(inputDate) : new Date();
 
-        const start = new Date(istDate);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(istDate);
-        end.setHours(23, 59, 59, 999);
+      const start = new Date(Date.UTC(
+        d.getUTCFullYear(),
+        d.getUTCMonth(),
+        d.getUTCDate(),
+        0, 0, 0, 0
+      ));
 
-        return { start, end };
-      };
+      const end = new Date(Date.UTC(
+        d.getUTCFullYear(),
+        d.getUTCMonth(),
+        d.getUTCDate(),
+        23, 59, 59, 999
+      ));
 
-      const { start, end } = getISTDayRange(date);
+      return { start, end };
+    };
 
-      // Aggregation pipeline for faster query & formatting
-      const slots = await Slot.aggregate([
-        { $match: { courtId: new mongoose.Types.ObjectId(id), isBooked: true, startDate: { $gte: start, $lte: end } } },
-        // Lookup user
-        {
-          $lookup: {
-            from: "users",
-            localField: "userId",
-            foreignField: "_id",
-            as: "user",
-          },
+    const { start, end } = getUTCDayRange(date);
+
+    // -------------------------------
+    // 2️⃣ Fetch booked slots (UTC)
+    // -------------------------------
+    const slots = await Slot.aggregate([
+      {
+        $match: {
+          courtId: new mongoose.Types.ObjectId(id),
+          isBooked: true,
+          startDate: { $gte: start, $lte: end },
         },
-        { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
-        // Lookup court
-        {
-          $lookup: {
-            from: "courts",
-            localField: "courtId",
-            foreignField: "_id",
-            as: "court",
-          },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
         },
-        { $unwind: { path: "$court", preserveNullAndEmptyArrays: true } },
-        // Project only necessary fields
-        {
-          $project: {
-            slotId: "$_id",
-            courtName: "$court.courtName",
-            userFirstName: "$user.firstName",
-            userLastName: "$user.lastName",
-            phoneNumber: "$user.phoneNumber",
-            notes: 1,
-            startTime: 1,
-            endTime: 1,
-            startDate: 1,
-          },
+      },
+      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "courts",
+          localField: "courtId",
+          foreignField: "_id",
+          as: "court",
         },
-        { $sort: { startDate: 1, startTime: 1 } },
-      ]);
+      },
+      { $unwind: { path: "$court", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          slotId: "$_id",
+          courtName: "$court.courtName",
+          userFirstName: "$user.firstName",
+          userLastName: "$user.lastName",
+          phoneNumber: "$user.phoneNumber",
+          notes: 1,
+          startTime: 1,
+          endTime: 1,
+          startDate: 1,
+        },
+      },
+      { $sort: { startDate: 1, startTime: 1 } },
+    ]);
 
-      if (!slots.length) {
-        return res.status(200).json({
-          message: date
-            ? `No bookings found for ${new Date(date).toLocaleDateString("en-IN", {
-                weekday: "long",
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-                timeZone: "Asia/Kolkata",
-              })}`
-            : "No bookings found for today",
-          count: 0,
-          data: [],
-        });
-      }
-
-      // Format date/time in JS, only once per slot
-      const formatted = slots.map((slot) => {
-        const startIST = new Date(slot.startTime).toLocaleTimeString("en-IN", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-          timeZone: "Asia/Kolkata",
-        });
-        const endIST = new Date(slot.endTime).toLocaleTimeString("en-IN", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-          timeZone: "Asia/Kolkata",
-        });
-
-        return {
-          slotId: slot.slotId,
-          court: slot.courtName || "Unknown Court",
-          bookedBy: `${slot.userFirstName || ""} ${slot.userLastName || ""}`.trim(),
-          phoneNumber: slot.phoneNumber || "",
-          date: new Date(slot.startDate).toLocaleDateString("en-IN", {
-            weekday: "short",
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-            timeZone: "Asia/Kolkata",
-          }),
-          time: `${startIST} - ${endIST}`,
-          notes: slot.notes || "",
-        };
-      });
-
+    if (!slots.length) {
       return res.status(200).json({
-        message: date ? `Bookings for ${new Date(date).toLocaleDateString("en-IN", {
-          weekday: "long",
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-          timeZone: "Asia/Kolkata",
-        })}` : "Today's booked slots",
-        count: formatted.length,
-        data: formatted,
+        message: date
+          ? `No bookings found for ${new Date(date).toLocaleDateString("en-IN", {
+              weekday: "long",
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+              timeZone: "Asia/Kolkata",
+            })}`
+          : "No bookings found for today",
+        count: 0,
+        data: [],
       });
-    } catch (error) {
-      console.error("Error fetching booked slots:", error);
-      return res.status(500).json({ message: "Server error", error: error.message });
     }
+
+    // -------------------------------
+    // 3️⃣ UTC → IST conversion (ONLY HERE)
+    // -------------------------------
+  const formatTimeIST = (date) => {
+  if (!date) return null;
+  
+  return new Date(date).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'UTC'  // Specify UTC timezone
+  });
 };
+
+    const formatDateIST = (utcDate) => {
+      return new Intl.DateTimeFormat("en-IN", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "Asia/Kolkata",
+      }).format(new Date(utcDate));
+    };
+
+    // -------------------------------
+    // 4️⃣ Final response formatting
+    // -------------------------------
+    const formatted = slots.map((slot) => ({
+      slotId: slot.slotId,
+      court: slot.courtName || "Unknown Court",
+      bookedBy: `${slot.userFirstName || ""} ${slot.userLastName || ""}`.trim(),
+      phoneNumber: slot.phoneNumber || "",
+      date: formatDateIST(slot.startDate),
+      time: `${formatTimeIST(slot.startTime)} - ${formatTimeIST(slot.endTime)}`,
+      notes: slot.notes || "",
+    }));
+
+    return res.status(200).json({
+      message: date
+        ? `Bookings for ${formatDateIST(date)}`
+        : "Today's booked slots",
+      count: formatted.length,
+      data: formatted,
+    });
+
+  } catch (error) {
+    console.error("Error fetching booked slots:", error);
+    return res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
+
 const cancelBooking = async (req, res) => {
   try {
     const { id } = req.params; // bookingId
