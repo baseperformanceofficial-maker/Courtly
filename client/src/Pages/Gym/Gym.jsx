@@ -30,7 +30,7 @@ const Gym = () => {
 
   const showModal = (member) => {
     setUserId(member._id);
-    setFormData((prev) => ({ 
+    setFormData((prev) => ({
       ...prev,
       phoneNumber: member.phoneNumber, // pre-fill phone number
       trainerId: member.trainer?._id || "", // optional: pre-fill trainer
@@ -179,7 +179,7 @@ const Gym = () => {
       fetchMembers();
     } catch (err) {
       console.error(err);
-      toast.error(err.message);
+      toast.error("Check all the fields and try again.");
     }
   };
 
@@ -280,9 +280,8 @@ const Gym = () => {
       return;
     }
 
-    const message = `Hi ${
-      name || "there"
-    }, I wanted to check in about your membership.`;
+    const message = `Hi ${name || "there"
+      }, I wanted to check in about your membership.`;
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
   };
@@ -357,21 +356,19 @@ const Gym = () => {
             <div className={styles.tabs}>
               <button
                 onClick={() => setActiveTab("members")}
-                className={`${styles.tab} ${
-                  activeTab === "members"
+                className={`${styles.tab} ${activeTab === "members"
                     ? styles.tabActive
                     : styles.tabInactive
-                }`}
+                  }`}
               >
                 Members
               </button>
               <button
                 onClick={() => setActiveTab("addMembers")}
-                className={`${styles.tab} ${
-                  activeTab === "addMembers"
+                className={`${styles.tab} ${activeTab === "addMembers"
                     ? styles.tabActive
                     : styles.tabInactive
-                }`}
+                  }`}
               >
                 Add Members
               </button>
@@ -551,11 +548,10 @@ const Gym = () => {
                           <td className={styles.tableCell}>
                             <div className={styles.statusContainer}>
                               <span
-                                className={`${styles.statusBadge} ${
-                                  member.subscription.status === "active"
+                                className={`${styles.statusBadge} ${member.subscription.status === "active"
                                     ? styles.statusActive
                                     : styles.statusExpired
-                                }`}
+                                  }`}
                               >
                                 {member.subscription.status.toUpperCase()}
                               </span>
@@ -1138,7 +1134,7 @@ const Gym = () => {
                 <strong>UserType:</strong>{" "}
                 {viewMember.userType
                   ? viewMember.userType.charAt(0).toUpperCase() +
-                    viewMember.userType.slice(1).toLowerCase()
+                  viewMember.userType.slice(1).toLowerCase()
                   : ""}
               </p>
               <p className="text-gray-500 text-sm">
@@ -1256,7 +1252,7 @@ const Gym = () => {
                             } catch (err) {
                               toast.error(
                                 err.response?.data?.message ||
-                                  "Failed to delete PDF"
+                                "Failed to delete PDF"
                               );
                             }
                           }}
