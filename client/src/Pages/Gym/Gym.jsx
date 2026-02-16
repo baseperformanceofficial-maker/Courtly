@@ -16,7 +16,7 @@ const Gym = () => {
   const [trainers, setTrainers] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [limit] = useState(5);
+  const [limit] = useState(10);
   const [subscriptionFilter, setSubscriptionFilter] = useState("");
   const [combinedFilter, setCombinedFilter] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -479,7 +479,7 @@ const Gym = () => {
                         <th className={styles.tableHeaderCell}>
                           WhatsApp Number
                         </th>
-                        <th className={styles.tableHeaderCell}>Joining date</th>
+                        <th className={styles.tableHeaderCell}>Start date</th>
                         <th className={styles.tableHeaderCell}>Ended Date</th>
                         <th className={styles.tableHeaderCell}>Actions</th>
                         <th className={styles.tableHeaderCell}>
